@@ -2,4 +2,143 @@
 
 This project intends to explore building a Long Short Term Memory Neural Network and XGBoost from scratch for the fun of it. I'll be using Financial Data from Yahoo by an API.
 
-![LSTM Model](Financial-Data-Prediction/Images/LSTM Model.png)
+![LSTM Model](./Images/LSTM%20Model.png)
+
+
+# Methodology
+
+## First Neural Network Design 
+
+### Overall Build
+
+We'll use a 1 cell 1 layer LSTM to a single linear activation neural node to train on financial data of a company.
+
+###
+
+
+### LSTM Portion
+
+An LSTM is constructed of 4 gates:
+1. Forget Gate
+2. Input Gate
+3. State Candidate Gate
+4. Output Gate
+
+Forget, Input and Output gates all share the same structure and hence will inherit the same class Sigmoid Neuron. The State Candidate Gate for the sake of abstraction and clarity will also inherit from the Tanh Neuron class. 
+
+We will use Mean Squared Error (MSE) as our loss function.
+
+Data structure required for training an LSTM is the following:
+X-coords, x-time steps, and then a prediction,.
+Loop and feed the time steps until the last one.
+
+The number of inputs required = number of features. 
+
+
+### Derivation of gradients for back propigation 
+
+To perform Stochastic Gradient Descent (SGD), we need the derivatives of the loss function with respect to the weights and biases. Given there are 4 gates with $n$ inputs, there will be $4$ biases and $4 * n$ weights, resulting in a lot of gradients. However, we do not need to calculate them all. In fact, we only need to calculate the gradients for the biases and weights for the Sigmoid and Tanh Neuron. This means we need $2$ bias gradients and $2 * n$ weight gradients.
+
+However, given that the formula is a linear combination, we can generalise the formula. Therefore, only $2$ weight gradients need to be calculated (one for Tanh and one for Sigmoid) and can be extrapolated to the other weights in the formula. 
+
+Let:
+1. $W_{Si}$ be the weight for the i'th input in the Sigmoid Neuron
+2. $b_{S}$ be the bias in the Sigmoid Neuron
+3. $W_{Ti}$ be the weight for the i'th input in the Tanh Neuron
+4. $b_{T}$ be the bias in the Tanh Neuron
+5. $L = \frac{1}{n}\sum_{i=1}^n(y_{i}-\hat{y}_{i})$
+6. $\eta$ be the learning rate
+
+Performing SGD requires us to calculate their relavent gradients:
+$$
+W_{Si}^{\text{New}} = W_{Si}^{\text{Old}} - \eta \frac{dL}{dW_{Si}} 
+$$
+$$
+b_{S}^{\text{New}} = b_{S}^{\text{Old}} - \eta \frac{dL}{b_{S}} 
+$$
+$$
+W_{Ti}^{\text{New}} = W_{Ti}^{\text{Old}} - \eta \frac{dL}{dW_{Ti}} 
+$$
+$$
+b_{T}^{\text{New}} = b_{T}^{\text{Old}} - \eta \frac{dL}{b_{T}} 
+$$
+
+#### Gradient Calculation
+
+Using chain rule, we can decompose the gradients. 
+
+Let:
+1. $\hat{y_i} = a_i + b_ih_t$
+2. $h_t = S_t \times \tanh(c_t)$ - where $c_t$ is the cell state update
+3. $S_t = \sigma(f_t)$ - where $\sigma$ is the sigmoid function
+4. $f_t = \sum_{i=1}^n W_{Si}x_{Si} + W_{Sh_{t-1}}h_{t-1}+b_T$
+
+Note that for number 1, this is due to a linear activation node at the end.
+Note that for number 4, $n$ =number of features.
+
+##### Sigmoid Neural Node
+
+We can decompose the derivative of our loss function with respect to the weights of the Sigmoid Neural Node. This can also be applied to the additional weight for the hidden state ($h_{t-1}$) since we are dealing with a linear sum.
+
+###### Weights
+$$
+\frac{dL}{dW_{Si}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
+$$
+
+$$
+\begin{align*}
+\frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
+\frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
+\frac{dh_{t}}{dS_{t}} &= \tanh(c_{t})  \\
+\frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
+\frac{df_{t}}{dW_{Si}} &= x_{Si}
+\end{align*}
+$$
+$$
+\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
+$$
+
+###### Biases
+$$
+\frac{dL}{dW_{Si}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
+$$
+
+$$
+\begin{align*}
+\frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
+\frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
+\frac{dh_{t}}{dS_{t}} &= \tanh(c_{t})  \\
+\frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
+\frac{df_{t}}{dW_{Si}} &= x_{Si}
+\end{align*}
+$$
+$$
+\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
+$$
+
+##### Tanh Neural Node
+
+We can decompose the derivative of our loss function with respect to the weights of the Tanh Neural Node. This can also be applied to the additional weight for the hidden state ($h_{t-1}$) since we are dealing with a linear sum.
+$$
+\frac{dL}{dW_{Si}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
+$$
+
+$$
+\begin{align*}
+\frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
+\frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
+\frac{dh_{t}}{dS_{t}} &= \tanh(c_{t})  \\
+\frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
+\frac{df_{t}}{dW_{Si}} &= x_{Si}
+\end{align*}
+$$
+$$
+\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
+$$
+
+### Second Network Design 
+
+We'll use a 2 cell 1 layer LSTM to a single linear activation neural node to trade on financial data and a risk index of the stock market.
