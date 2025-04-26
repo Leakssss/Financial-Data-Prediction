@@ -65,13 +65,19 @@ $$
 
 #### Gradient Calculation
 
+
+How is a LSTM trained?
+
 Using chain rule, we can decompose the gradients. 
 
 Let:
 1. $\hat{y_i} = a_i + b_ih_t$
 2. $h_t = S_t \times \tanh(c_t)$ - where $c_t$ is the cell state update
 3. $S_t = \sigma(f_t)$ - where $\sigma$ is the sigmoid function
-4. $f_t = \sum_{i=1}^n W_{Si}x_{Si} + W_{Sh_{t-1}}h_{t-1}+b_T$
+4. $c_t = {fo}_t \times c_{t-1} + i_{t} \times g_{t}$
+5. $g_t = \tanh(f_t)$
+
+PROBABLY SHOULD BE SEPARATING THE BACKWARD PASS OF MY LINEAR ACTIVATIon NODE.
 
 Note that for number 1, this is due to a linear activation node at the end.
 Note that for number 4, $n$ =number of features.
@@ -80,13 +86,17 @@ Note that for number 4, $n$ =number of features.
 
 We can decompose the derivative of our loss function with respect to the weights of the Sigmoid Neural Node. This can also be applied to the additional weight for the hidden state ($h_{t-1}$) since we are dealing with a linear sum.
 
+Let:
+
+2. $f_t = \sum_{i=1}^n W_{Si}x_{Si} + W_{Sh_{t-1}}h_{t-1}+b_{St}$
+
 ###### Weights
-$$
+```math
 \frac{dL}{dW_{Si}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
 \times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
-$$
+```
 
-$$
+```math
 \begin{align*}
 \frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
 \frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
@@ -94,29 +104,29 @@ $$
 \frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
 \frac{df_{t}}{dW_{Si}} &= x_{Si}
 \end{align*}
-$$
-$$
+```
+```math
 \frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
-$$
+```
 
 ###### Biases
-$$
-\frac{dL}{dW_{Si}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
-\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
-$$
+```math
+\frac{dL}{db_{S}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{db_{St}} 
+```
 
-$$
+```math
 \begin{align*}
 \frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
 \frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
 \frac{dh_{t}}{dS_{t}} &= \tanh(c_{t})  \\
 \frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
-\frac{df_{t}}{dW_{Si}} &= x_{Si}
+\frac{df_{t}}{db_{St}} &= b_{St}
 \end{align*}
-$$
-$$
-\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
-$$
+```
+```math
+\frac{dL}{db_{St}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times b_{St}
+```
 
 ##### Tanh Neural Node
 
@@ -126,18 +136,47 @@ $$
 \times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Si}} 
 $$
 
-$$
+Let:
+1. $f_t = \sum_{i=1}^n W_{Ti}x_{Ti} + W_{Th_{t-1}}h_{t-1}+b_{Tt}$
+
+###### Weights
+```math
+\frac{dL}{dW_{Ti}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dc_{t}} \times \frac{dc_{t}}{dg_{t}} \times \frac{dg_{t}}{df_{t}} \times \frac{df_{t}}{dW_{Ti}} 
+```
+
+```math
+\begin{align*}
+\frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
+\frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
+\frac{dh_{t}}{dc_{t}} &= (1-\tanh^2(c_t))   \\
+\frac{dc_{t}}{dg_{t}} &= i_t \\
+\frac{dg_{t}}{df_{t}}  &= i_t \\
+\frac{df_{t}}{dW_{Ti}} &= x_{Ti}
+\end{align*}
+```
+```math
+\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
+```
+
+###### Biases
+```math
+\frac{dL}{db_{S}} = \frac{dL}{d\hat{y}_{i}} \times \frac{d\hat{y}_{i}}{dh_{t}}
+\times \frac{dh_{t}}{dS_{t}} \times \frac{dS_{t}}{df_{t}} \times \frac{df_{t}}{db_{St}} 
+```
+
+```math
 \begin{align*}
 \frac{dL}{d\hat{y}_{i}} &= \frac{2}{n}(\hat{y}_{i}-y_{i})  \\
 \frac{d\hat{y}_{i}}{dh_{t}} &= b_{i} \\
 \frac{dh_{t}}{dS_{t}} &= \tanh(c_{t})  \\
 \frac{dS_{t}}{df_{t}} &= \sigma(f_{t})(1-\sigma(f_{t})) \\
-\frac{df_{t}}{dW_{Si}} &= x_{Si}
+\frac{df_{t}}{db_{St}} &= b_{St}
 \end{align*}
-$$
-$$
-\frac{dL}{dW_{Si}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times x_{Si}
-$$
+```
+```math
+\frac{dL}{db_{St}} = \frac{2}{n}(\hat{y}_{i}-y_{i}) \times b_{i} \times \tanh(c_{t}) \times \sigma(f_{t}) \times (1-\sigma(f_{t})) \times b_{St}
+```
 
 ### Second Network Design 
 
