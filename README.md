@@ -7,6 +7,51 @@ This project intends to explore building a Long Short Term Memory Neural Network
 
 # Methodology
 
+## RNNs and LSTMs
+
+There are different uses for recursive neural networks and its variants.
+
+They can either be a:
+1. Sequence to sequence: $(x^1, x^2, \dots, x^T)$, $(y^1, y^2, \dots, y^T)$
+2. Sequence to one: $(x^1, x^2, \dots, x^T)$, $y^T$
+
+Sequence to sequence accumulates a loss across the entire output vector.
+Sequence to one only calculates the loss for the final prediciton and passes that along. 
+
+Note that usually the output vectors are shifted versions of your original dataset.
+
+While recursive neural netowrks and their variants can theoretically predict for any variable sequence of length, there will likely be a performance correlation with the shape of their data.
+
+If your input shape is 5 steps during the training phase, your model will perform the best for 5 steps and suffer as you deviate from this.
+
+This will be discussed in x section.
+
+There are many methods to deal with this either by altering your prediction set to be structured in the same way as your training set, or altering your training set to make your neural network more robust. 
+
+## Back Propogation Through Time
+
+In general we can define our loss function as the mean of an objective function across our $T$ length sample:
+
+```math
+L = \frac{1}{T}\sum^T_{t=1}l(y_t,\hat{y}_t)
+```
+
+### Sequence to Sequence
+
+In sequence to sequence, this loss stays the same.
+
+Defining the fomrulas:
+
+
+There is a dependency on the previous iteration resulting in a recursive nature. This intuitevely makes sense, each prediction from an earlier stage, contributes to a later stage and thus results in a recursive derivative.
+
+### Sequence to One
+In sequence to one, we only evaluate the final output of the last input $x^T$ after feeding in the rest of the sequence to the ground truth. 
+
+```math
+L = l(y_T,\hat{y}_T)
+```
+
 ## First Neural Network Design 
 
 ### Overall Build
